@@ -1,0 +1,8 @@
+
+
+
+# TODO Create a way to check if resources are sufficient to make the drink.
+# TODO Process coins (pennies, nickels, dimes, quarters).
+# TODO Check if enough money was given. If not, give the user a refund and don't store the money.
+# TODO If too much money is given, give back change.
+# TODO If money and resources are enough, deduct resources to make drink.
