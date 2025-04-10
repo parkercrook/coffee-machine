@@ -10,7 +10,7 @@ def prompt_to_turn_on(command):
 
 def prompt_for_drink():
     choice = ""
-    while choice != "espresso" and choice != "latte" and choice != "cappuccino" and choice != "off" and choice != "report":
+    while choice != "espresso" and choice != "latte" and choice != "cappuccino" and choice != "off" and choice != "report" and choice != "refill":
         choice = input("What can I make for you? (espresso/latte/cappuccino): ").lower()
     return choice
 
@@ -32,20 +32,22 @@ def prompt_for_money():
         print("Error. Not a valid amount of coins.")
     return money_given
 
-def give_response(drink, response):
-    if response == main.RESPONSE_CODES["OK"]:
-        print(f"Thank you! Here is your {drink}!")
-    elif response == main.RESPONSE_CODES["FUNDS ERROR"]:
+def give_response(drink, response, change=0.0, missing_resources=None):
+    if missing_resources is None:
+        missing_resources = []
+    if response == main.RESPONSE_CODES["FUNDS ERROR"]:
         print(f"Sorry. That's not enough money to purchase a {drink}. Here is your money back.")
-    elif response == main.RESPONSE_CODES["INSUFFICIENT WATER ERROR"]:
-        print(f"Sorry, not enough water to make {drink}. Here is your money back. Please add more water.")
-    elif response == main.RESPONSE_CODES["INSUFFICIENT COFFEE ERROR"]:
-        print(f"Sorry, not enough coffee to make {drink}. Here is your money back. Please add more coffee.")
-    elif response == main.RESPONSE_CODES["INSUFFICIENT MILK ERROR"]:
-        print(f"Sorry, not enough milk to make {drink}. Here is your money back. Please add more milk.")
-    else:
-        print(f"Thank you! Here is your {drink}!")
-        print(f"Your change is ${response}")
+    elif response == main.RESPONSE_CODES["INSUFFICIENT RESOURCE ERROR"]:
+        print("Sorry, there's not enough: ")
+        for resource in missing_resources:
+            print(f"--> {resource}")
+        print("Please refill the needed ingredients.")
+    elif response == main.RESPONSE_CODES["GIVE CHANGE"]:
+        print(f"Thank you! Here is your ☕ {drink}!")
+        if change > 0.0:
+            print(f"Your change is ${change}")
+    elif response == main.RESPONSE_CODES["OK"]:
+        print("Request was successful!")
 
 def execute_choice(choice):
     if choice == "off":
@@ -53,20 +55,31 @@ def execute_choice(choice):
     elif choice == "report":
         print_report()
         return True
+    elif choice == "refill":
+        response = main.refill_resources()
+        give_response(choice, response)
+        return True
     elif choice in main.MENU:
-        money = prompt_for_money()
-        if len(money) != 0:
-            response_code = main.request_drink(money["Pennies"], money["Nickels"], money["Dimes"], money["Quarters"], choice)
-            give_response(choice, response_code)
+        resource_response_code = main.check_enough_resources(choice)
+        if resource_response_code  == main.RESPONSE_CODES["OK"]:
+            money_given = prompt_for_money()
+            funds_response_code = main.check_enough_funds(money_given, choice)
+            if funds_response_code == main.RESPONSE_CODES["GIVE CHANGE"]:
+                change = main.give_change(money_given, choice)
+                main.make_drink(choice)
+                give_response(choice, funds_response_code, change)
+            else:
+                give_response(choice, funds_response_code)
+        else:
+            missing_resources = main.get_missing_resources(choice)
+            give_response(choice, resource_response_code, missing_resources=missing_resources)
+
         return True
 
-
-###########################################################################################
+################################################## PROGRAM START ##################################################
 
 user_command = ""
-
 on = prompt_to_turn_on(user_command)
-
 while on:
     user_command = prompt_for_drink()
     on = execute_choice(user_command)

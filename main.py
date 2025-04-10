@@ -35,48 +35,69 @@ MENU = {
 RESPONSE_CODES = {
     "OK" : 0,
     "FUNDS ERROR" : 1,
-    "INSUFFICIENT WATER ERROR": 2,
-    "INSUFFICIENT COFFEE ERROR": 3,
-    "INSUFFICIENT MILK ERROR":  4,
-    "GIVE CHANGE": 5
+    "INSUFFICIENT RESOURCE ERROR": 2,
+    "GIVE CHANGE": 3
 }
 
 PENNY_VALUE = 0.01
 NICKEL_VALUE = 0.05
 DIME_VALUE = 0.10
 QUARTER_VALUE = 0.25
+MAX_WATER = 300
+MAX_COFFEE_GROUNDS = 100
+MAX_MILK = 200
 
-def convert_coins(pennies, nickels, dimes, quarters):
-    return (pennies * PENNY_VALUE) + (nickels * NICKEL_VALUE) + (dimes * DIME_VALUE) + (quarters * QUARTER_VALUE)
+def convert_coins(money_given):
+    """Converts coins given into a total money value based on their individual values."""
+    return (money_given["Pennies"] * PENNY_VALUE) + (money_given["Nickels"] * NICKEL_VALUE) + (money_given["Dimes"] * DIME_VALUE) + (money_given["Quarters"] * QUARTER_VALUE)
 
-def give_change(total_received, drink_cost):
-    return round(total_received - drink_cost, 2)
+def give_change(money_given, drink):
+    """Returns change by subtracting the chosen drink's cost by the money given."""
+    drink_cost = MENU[drink]["cost"]
+    total = convert_coins(money_given)
+    return round(total - drink_cost, 2)
 
-def check_enough_funds(p, n, d, q, drink_requested):
-    money = convert_coins(p, n, d, q)
+def add_funds_to_total(drink_cost):
+    global total_money
+    total_money += drink_cost
+
+def check_enough_funds(money_given, drink_requested):
+    """Checks that the user provided enough coins for the drink requested and returns a response code."""
+    money = convert_coins(money_given)
     if money < MENU[drink_requested]["cost"]:
         return RESPONSE_CODES["FUNDS ERROR"]
-    elif money == MENU[drink_requested]["cost"]:
-        return RESPONSE_CODES["OK"]
-    elif money  > MENU[drink_requested]["cost"]:
+    elif money >= MENU[drink_requested]["cost"]:
+        add_funds_to_total(MENU[drink_requested]["cost"])
         return RESPONSE_CODES["GIVE CHANGE"]
 
-def check_enough_resources(drink_choice):
+def get_missing_resources(drink_choice):
+    """Checks missing resources for the requested drink and returns a list of which are missing."""
+    missing_resources = []
     if "water" in MENU[drink_choice]["ingredients"]:
         if resources["water"] < MENU[drink_choice]["ingredients"]["water"]:
-            return RESPONSE_CODES["INSUFFICIENT WATER ERROR"]
+            missing_resources.append("Water")
 
     if "coffee" in MENU[drink_choice]["ingredients"]:
         if resources["coffee"] < MENU[drink_choice]["ingredients"]["coffee"]:
-            return RESPONSE_CODES["INSUFFICIENT COFFEE ERROR"]
+            missing_resources.append("Coffee")
 
     if "milk" in MENU[drink_choice]["ingredients"]:
         if resources["milk"] < MENU[drink_choice]["ingredients"]["milk"]:
-            return RESPONSE_CODES["INSUFFICIENT MILK ERROR"]
+            missing_resources.append("Milk")
 
-    return RESPONSE_CODES["OK"]
+    return missing_resources
+
+
+def check_enough_resources(drink_choice):
+    """Checks that the machine contains enough resources for the drink requested and returns a response code."""
+    missing_resources = get_missing_resources(drink_choice)
+    if len(missing_resources) > 0:
+        return RESPONSE_CODES["INSUFFICIENT RESOURCE ERROR"]
+    else:
+        return RESPONSE_CODES["OK"]
 
 def make_drink(drink):
+    """Removes needed ingredients from the machine's resources for the requested drink."""
     if "water" in MENU[drink]["ingredients"]:
         resources["water"] -= MENU[drink]["ingredients"]["water"]
 
@@ -86,26 +107,15 @@ def make_drink(drink):
     if "milk" in MENU[drink]["ingredients"]:
         resources["milk"] -= MENU[drink]["ingredients"]["milk"]
 
+def refill_resources():
+    resources["water"] = MAX_WATER
+    resources["coffee"]  = MAX_COFFEE_GROUNDS
+    resources["milk"] = MAX_MILK
+
+    return RESPONSE_CODES["OK"]
 
 
-def request_drink(p, n, d, q, drink):
-    resources_response = check_enough_resources(drink)
-    money_given = convert_coins(p, n, d, q)
-    funds_response = check_enough_funds(p, n, d, q, drink)
 
-    if resources_response == RESPONSE_CODES["OK"]:
-        if funds_response == RESPONSE_CODES["FUNDS ERROR"]:
-            return funds_response
-        else:
-            make_drink(drink)
-            global total_money
-            total_money += MENU[drink]["cost"]
-            if funds_response == RESPONSE_CODES["GIVE CHANGE"]:
-                return give_change(money_given, MENU[drink]["cost"])
-            else:
-                return resources_response
-    else:
-        return resources_response
 
 
 
