@@ -1,9 +1,6 @@
 import main
 import art
 
-ERROR_CODES = {
-}
-
 def prompt_to_turn_on(command):
     while command != "on":
         command = input("Hello. Please type 'on' to turn on... ").lower()
@@ -13,13 +10,14 @@ def prompt_to_turn_on(command):
 
 def prompt_for_drink():
     choice = ""
-    while choice != "espresso" and choice != "latte" and choice != "capuccino" and choice != "off" and choice != "report":
+    while choice != "espresso" and choice != "latte" and choice != "cappuccino" and choice != "off" and choice != "report":
         choice = input("What can I make for you? (espresso/latte/cappuccino): ").lower()
     return choice
 
 def print_report():
     for resource in main.resources:
         print(f"{resource.upper()}: {main.resources[resource]}")
+    print(f"Money available: ${main.total_money}")
 
 def prompt_for_money():
     money_given = {}
@@ -34,6 +32,20 @@ def prompt_for_money():
         print("Error. Not a valid amount of coins.")
     return money_given
 
+def give_response(drink, response):
+    if response == main.RESPONSE_CODES["OK"]:
+        print(f"Thank you! Here is your {drink}!")
+    elif response == main.RESPONSE_CODES["FUNDS ERROR"]:
+        print(f"Sorry. That's not enough money to purchase a {drink}. Here is your money back.")
+    elif response == main.RESPONSE_CODES["INSUFFICIENT WATER ERROR"]:
+        print(f"Sorry, not enough water to make {drink}. Here is your money back. Please add more water.")
+    elif response == main.RESPONSE_CODES["INSUFFICIENT COFFEE ERROR"]:
+        print(f"Sorry, not enough coffee to make {drink}. Here is your money back. Please add more coffee.")
+    elif response == main.RESPONSE_CODES["INSUFFICIENT MILK ERROR"]:
+        print(f"Sorry, not enough milk to make {drink}. Here is your money back. Please add more milk.")
+    else:
+        print(f"Thank you! Here is your {drink}!")
+        print(f"Your change is ${response}")
 
 def execute_choice(choice):
     if choice == "off":
@@ -41,13 +53,12 @@ def execute_choice(choice):
     elif choice == "report":
         print_report()
         return True
-    elif choice == "espresso":
+    elif choice in main.MENU:
         money = prompt_for_money()
-        if len(money) == 0:
-            return True
-        else:
-            print(main.request_espresso(money["Pennies"], money["Nickels"],money["Dimes"], money["Quarters"]))
-            return True
+        if len(money) != 0:
+            response_code = main.request_drink(money["Pennies"], money["Nickels"], money["Dimes"], money["Quarters"], choice)
+            give_response(choice, response_code)
+        return True
 
 
 ###########################################################################################
